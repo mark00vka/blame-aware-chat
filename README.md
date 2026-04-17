@@ -4,49 +4,71 @@
 [![Version](https://img.shields.io/jetbrains/plugin/v/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
 [![Downloads](https://img.shields.io/jetbrains/plugin/d/MARKETPLACE_ID.svg)](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID)
 
-## Template ToDo list
-- [x] Create a new [IntelliJ Platform Plugin Template][template] project.
-- [ ] Get familiar with the [template documentation][template].
-- [ ] Adjust the [pluginGroup](./gradle.properties) and [pluginName](./gradle.properties), as well as the [id](./src/main/resources/META-INF/plugin.xml) and [sources package](./src/main/kotlin).
-- [ ] Adjust the plugin description in `README` (see [Tips][docs:plugin-description])
-- [ ] Review the [Legal Agreements](https://plugins.jetbrains.com/docs/marketplace/legal-agreements.html?from=IJPluginTemplate).
-- [ ] [Publish a plugin manually](https://plugins.jetbrains.com/docs/intellij/publishing-plugin.html?from=IJPluginTemplate) for the first time.
-- [ ] Set the `MARKETPLACE_ID` in the above README badges. You can obtain it once the plugin is published to JetBrains Marketplace.
-- [ ] Set the [Plugin Signing](https://plugins.jetbrains.com/docs/intellij/plugin-signing.html?from=IJPluginTemplate) related [secrets](https://github.com/JetBrains/intellij-platform-plugin-template#environment-variables).
-- [ ] Set the [Deployment Token](https://plugins.jetbrains.com/docs/marketplace/plugin-upload.html?from=IJPluginTemplate).
-- [ ] Click the <kbd>Watch</kbd> button on the top of the [IntelliJ Platform Plugin Template][template] to be notified about releases containing new features and fixes.
-- [ ] Configure the [CODECOV_TOKEN](https://docs.codecov.com/docs/quick-start) secret for automated test coverage reports on PRs
-
 <!-- Plugin description -->
-This Fancy IntelliJ Platform Plugin is going to be your implementation of the brilliant ideas that you have.
+An IntelliJ plugin that lets you ask an LLM about any Kotlin function — with git blame context automatically included.
 
-This specific section is a source for the [plugin.xml](/src/main/resources/META-INF/plugin.xml) file which will be extracted by the [Gradle](/build.gradle.kts) during the build process.
-
-To keep everything working, do not remove `<!-- ... -->` sections. 
+Place your caret inside a function, type a question, and the plugin builds a rich prompt containing the function body annotated with commit history, sibling signatures, called function signatures, and imports. The LLM sees *who changed what and why*, not just the raw code.
 <!-- Plugin description end -->
+
+## Why
+
+LLM context windows are finite, and token budgets are shrinking. If you've hit usage limits trying to feed an entire codebase to an agent, you know the pain. This plugin takes the opposite approach: instead of dumping everything in and hoping the model figures it out, it surgically extracts only the function you care about, its call graph, and the git history behind each line — then sends that compact, high-signal prompt to the LLM. Fewer tokens, more relevance.
+
+## How it works
+
+1. **Context packing** — The plugin inspects the Kotlin PSI tree at the caret position and collects:
+   - The full target function body
+   - Import statements from the file
+   - Signatures of sibling functions (bodies omitted)
+   - Signatures of same-module functions called by the target (up to 15)
+
+2. **Blame annotation** — Each line of the target function is annotated with its git blame info (short commit hash + commit subject). Consecutive lines from the same commit are grouped under a single header, keeping the prompt compact.
+
+3. **LLM query** — The assembled prompt is sent to the configured provider and the response is displayed in the tool window.
+
+## Supported LLM providers
+
+| Provider | Model | Key required |
+|----------|-------|:------------:|
+| Claude (Anthropic) | `claude-sonnet-4-6` | Yes |
+| Gemini (Google AI Studio) | `gemini-2.5-flash` | Yes |
+| Ollama (local) | `qwen2.5-coder:7b` | No |
+
+## Getting started
+
+1. Install the plugin (see [Installation](#installation) below).
+2. Open **Settings** > **Tools** > **Blame-Aware Chat**.
+3. Pick a provider and enter an API key (or just use Ollama locally).
+4. Open a Kotlin file and place your caret inside a function.
+5. Open the **Blame-Aware Chat** tool window (right sidebar).
+6. Type a question and click **Ask** — or click **Preview context** to inspect the prompt before sending.
 
 ## Installation
 
-- Using the IDE built-in plugin system:
+- **From the IDE:**
+  <kbd>Settings</kbd> > <kbd>Plugins</kbd> > <kbd>Marketplace</kbd> > search for `blame-aware-chat` > <kbd>Install</kbd>
 
-  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>Marketplace</kbd> > <kbd>Search for "blame-aware-chat"</kbd> >
-  <kbd>Install</kbd>
+- **From JetBrains Marketplace:**
+  Visit the [plugin page](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID) and click <kbd>Install to ...</kbd>.
 
-- Using JetBrains Marketplace:
+- **From disk:**
+  Download the [latest release](https://github.com/mark00vka/blame-aware-chat/releases/latest) and install via
+  <kbd>Settings</kbd> > <kbd>Plugins</kbd> > <kbd>Gear icon</kbd> > <kbd>Install plugin from disk...</kbd>
 
-  Go to [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID) and install it by clicking the <kbd>Install to ...</kbd> button in case your IDE is running.
+## Requirements
 
-  You can also download the [latest release](https://plugins.jetbrains.com/plugin/MARKETPLACE_ID/versions) from JetBrains Marketplace and install it manually using
-  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
+- IntelliJ IDEA 2025.2+
+- Kotlin plugin enabled
+- Git4Idea plugin enabled (bundled with IDEA)
 
-- Manually:
+## Building from source
 
-  Download the [latest release](https://github.com/mark00vka/blame-aware-chat/releases/latest) and install it manually using
-  <kbd>Settings/Preferences</kbd> > <kbd>Plugins</kbd> > <kbd>⚙️</kbd> > <kbd>Install plugin from disk...</kbd>
+```bash
+./gradlew buildPlugin
+```
 
+The distributable zip will be in `build/distributions/`.
 
 ---
-Plugin based on the [IntelliJ Platform Plugin Template][template].
 
-[template]: https://github.com/JetBrains/intellij-platform-plugin-template
-[docs:plugin-description]: https://plugins.jetbrains.com/docs/intellij/plugin-user-experience.html#plugin-description-and-presentation
+Plugin based on the [IntelliJ Platform Plugin Template](https://github.com/JetBrains/intellij-platform-plugin-template).
