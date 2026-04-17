@@ -5,11 +5,22 @@
     <vendor>mark00vka</vendor>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>org.jetbrains.kotlin</depends>
+    <depends>Git4Idea</depends>
 
-    <resource-bundle>messages.MyBundle</resource-bundle>
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <supportsKotlinPluginMode supportsK2="true"/>
+    </extensions>
 
     <extensions defaultExtensionNs="com.intellij">
-        <toolWindow factoryClass="com.github.mark00vka.blameawarechat.toolWindow.MyToolWindowFactory" id="MyToolWindow"/>
-        <postStartupActivity implementation="com.github.mark00vka.blameawarechat.startup.MyProjectActivity" />
+        <toolWindow factoryClass="com.github.mark00vka.blameawarechat.toolWindow.ChatToolWindowFactory"
+                    id="Blame-Aware Chat"
+                    anchor="right"
+                    icon="AllIcons.Toolwindows.ToolWindowMessages"/>
+        <applicationConfigurable
+                parentId="tools"
+                instance="com.github.mark00vka.blameawarechat.settings.LlmSettingsConfigurable"
+                id="com.github.mark00vka.blameawarechat.settings"
+                displayName="Blame-Aware Chat"/>
     </extensions>
 </idea-plugin>
